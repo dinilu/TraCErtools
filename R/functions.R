@@ -7,7 +7,7 @@
 #' @export
 #'
 #' @examples # TBW
-.read_trace_subset <- function(file, sf = NULL) {
+.read_dstrace_subset <- function(file, sf = NULL) {
   data <- stars::read_stars(file)
   if(is.null(sf)){
     data <- sf::st_crop(data, sf)
@@ -29,7 +29,7 @@
 #' @export
 #'
 #' @examples # TBW
-read_trace_subset <- function(folder, var, y_start, y_end, sf = NULL){
+read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
 
   y_start <- as.numeric(y_start)
   y_end <- as.numeric(y_end)
@@ -47,10 +47,10 @@ read_trace_subset <- function(folder, var, y_start, y_end, sf = NULL){
   files <- paste0(folder, "/", var, "/", var, y_seq, ".nc")
 
   if(length(files) > 1){
-    data <- lapply(files, FUN=.read_trace_subset, sf)
+    data <- lapply(files, FUN=.read_dstrace_subset, sf)
     data <- do.call(c, data)
   } else {
-    data <- .read_trace_subset(files, sf)
+    data <- .read_dstrace_subset(files, sf)
   }
 
   time_2_calendar_dates(data, y_start, y_end)
@@ -95,3 +95,33 @@ time_2_calendar_dates <- function(data, y_start, y_end, by = "1 month") {
   stars::st_dimensions(data)$time$values <- cal_dates
   data
 }
+
+
+
+
+read_trace_subset <- function(folder, var, ){
+  folder <- "../Data/TraCE21ka"
+  var <- "TS"
+  files <- list.files(paste0(folder, "/", var), full.names = TRUE, pattern=".nc")
+  data <- lapply(files, FUN = stars::read_ncdf)
+  data <- do.call(c, data)
+  st_dimensions(data)$time$values <- calendar_dates(-22000, 40, by = "1 month")
+  data_backup <- data
+  if(var %in% c("TS", "TSMX", "TSMN")){
+    data[[var]]  <- as.numeric(data[[var]]) - 273.15
+    class(data[[var]]) <- class(data_backup[[var]])
+    units <- list(numerator = "C", denominator = character(0))
+    class(units) <- "symbolic_units"
+    attr(data[[var]], "units") <- units 
+  }  
+  if(var == "PRECC"){
+    data[[var]]  <- as.numeric(data[[var]]) * 2592000000
+    class(data[[var]]) <- class(data_backup[[var]])
+    units <- list(numerator = "mm", denominator = character(0))
+    class(units) <- "symbolic_units"
+    attr(data[[var]], "units") <- units 
+  }  
+  
+  data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
+  st_crop(data, point)
+} 
