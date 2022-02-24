@@ -99,13 +99,13 @@ time_2_calendar_dates <- function(data, y_start, y_end, by = "1 month") {
 
 
 
-read_trace_subset <- function(folder, var, ){
-  folder <- "../Data/TraCE21ka"
-  var <- "TS"
+read_trace_subset <- function(folder, var, point){
+  # folder <- "../Data/TraCE21ka"
+  # var <- "TS"
   files <- list.files(paste0(folder, "/", var), full.names = TRUE, pattern=".nc")
   data <- lapply(files, FUN = stars::read_ncdf)
   data <- do.call(c, data)
-  st_dimensions(data)$time$values <- calendar_dates(-22000, 40, by = "1 month")
+  stars::st_dimensions(data)$time$values <- calendar_dates(-22000, 40, by = "1 month")
   data_backup <- data
   if(var %in% c("TS", "TSMX", "TSMN")){
     data[[var]]  <- as.numeric(data[[var]]) - 273.15
@@ -121,7 +121,11 @@ read_trace_subset <- function(folder, var, ){
     class(units) <- "symbolic_units"
     attr(data[[var]], "units") <- units 
   }  
-  
-  data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
-  st_crop(data, point)
+  lat <- point[2]
+  lats <- stars::st_dimensions(data)$lat$value
+  dif.lats <- lats - lat
+  i <- which.max(dif.lats[dif.lats < 0])
+  data <- dplyr::filter(data, lat > floor(lats[i]), lat < ceiling(lats[i+1]))
+  # data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
+  sf::st_crop(data, point)
 } 
