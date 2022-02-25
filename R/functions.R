@@ -9,7 +9,7 @@
 #' @examples # TBW
 .read_dstrace_subset <- function(file, sf = NULL) {
   data <- stars::read_stars(file)
-  if(is.null(sf)){
+  if(!is.null(sf)){
     data <- sf::st_crop(data, sf)
   }
   data
@@ -31,10 +31,14 @@
 #' @examples # TBW
 read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
 
+  if(y_start >= y_end){
+    stop("Starting year same or greater than ending year. Provide a y_start value lower than y_end.")
+  }
+
   y_start <- as.numeric(y_start)
   y_end <- as.numeric(y_end)
 
-  if(y_start >= y_end){
+    if(y_start >= y_end){
     stop("Starting year same or higher than ending year. Provide a y_start value lower than y_end.")
   }
 
@@ -53,6 +57,8 @@ read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
     data <- .read_dstrace_subset(files, sf)
   }
 
+  names(data) <- var
+  
   time_2_calendar_dates(data, y_start, y_end)
 }
 
@@ -99,33 +105,84 @@ time_2_calendar_dates <- function(data, y_start, y_end, by = "1 month") {
 
 
 
+#' Read original TraCE21ka datasets 
+#'
+#' @param folder TBW
+#' @param var TBW
+#' @param point TBW
+#'
+#' @return TBW
+#' @export
+#'
+#' @examples # TBW 
 read_trace_subset <- function(folder, var, point){
   # folder <- "../Data/TraCE21ka"
   # var <- "TS"
   files <- list.files(paste0(folder, "/", var), full.names = TRUE, pattern=".nc")
   data <- lapply(files, FUN = stars::read_ncdf)
   data <- do.call(c, data)
-  stars::st_dimensions(data)$time$values <- calendar_dates(-22000, 40, by = "1 month")
-  data_backup <- data
+  
+  # gc()
+  
+  data <- time_2_calendar_dates(data, -22000, 40)
+  
   if(var %in% c("TS", "TSMX", "TSMN")){
-    data[[var]]  <- as.numeric(data[[var]]) - 273.15
-    class(data[[var]]) <- class(data_backup[[var]])
-    units <- list(numerator = "C", denominator = character(0))
-    class(units) <- "symbolic_units"
-    attr(data[[var]], "units") <- units 
+    data <- kelvin2celsius(data)
   }  
   if(var == "PRECC"){
-    data[[var]]  <- as.numeric(data[[var]]) * 2592000000
-    class(data[[var]]) <- class(data_backup[[var]])
-    units <- list(numerator = "mm", denominator = character(0))
-    class(units) <- "symbolic_units"
-    attr(data[[var]], "units") <- units 
+    data <- flux2mm(data)
   }  
+  
+  # gc()
+  
   lat <- point[2]
   lats <- stars::st_dimensions(data)$lat$value
   dif.lats <- lats - lat
   i <- which.max(dif.lats[dif.lats < 0])
+  
   data <- dplyr::filter(data, lat > floor(lats[i]), lat < ceiling(lats[i+1]))
   # data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
   sf::st_crop(data, point)
+} 
+
+
+#' Transform stars objects from degrees kelvin to degrees celsius
+#'
+#' @param data A stars object with temperature as degrees kelvin.
+#'
+#' @return TBW
+#' @export
+#'
+#' @examples # TBW  
+kelvin2celsius <- function(data) {
+  var <- names(data)
+  # data_backup <- data
+  data_class <- class(data[[var]])  
+  data[[var]]  <- as.numeric(data[[var]]) - 273.15
+  # class(data[[var]]) <- class(data_backup[[var]])
+  class(data[[var]]) <- data_class
+  units <- list(numerator = "\u00B0C", denominator = character(0))
+  class(units) <- "symbolic_units"
+  attr(data[[var]], "units") <- units 
+  data
+}
+
+
+#' Title
+#'
+#' @param data TBW
+#'
+#' @return TBW
+#' @export
+#'
+#' @examples # TBW
+flux2mm <- function(data){
+  var <- names(data)
+  data_class <- class(data[[var]]) 
+  data[[var]]  <- as.numeric(data[[var]]) * 2592000000
+  class(data[[var]]) <-data_class
+  units <- list(numerator = "mm", denominator = character(0))
+  class(units) <- "symbolic_units"
+  attr(data[[var]], "units") <- units 
+  data
 } 
