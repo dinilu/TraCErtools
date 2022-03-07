@@ -38,7 +38,7 @@ read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
   y_start <- as.numeric(y_start)
   y_end <- as.numeric(y_end)
 
-    if(y_start >= y_end){
+  if(y_start >= y_end){
     stop("Starting year same or higher than ending year. Provide a y_start value lower than y_end.")
   }
 
@@ -61,6 +61,7 @@ read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
   
   time_2_calendar_dates(data, y_start, y_end)
 }
+
 
 
 #' Create a calendar dates by specified time intervals.
@@ -133,12 +134,11 @@ read_trace_subset <- function(folder, var, point){
     data <- flux2mm(data)
   }  
   
-  # gc()
-  
   lat <- point[2]
   lats <- stars::st_dimensions(data)$lat$value
-  dif.lats <- lats - lat
-  i <- which.max(dif.lats[dif.lats < 0])
+  # dif.lats <- lats - lat
+  # i <- which.max(dif.lats[dif.lats < 0])
+  i <- findInterval(lat, lats)
   
   data <- dplyr::filter(data, lat > floor(lats[i]), lat < ceiling(lats[i+1]))
   # data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
@@ -186,3 +186,22 @@ flux2mm <- function(data){
   attr(data[[var]], "units") <- units 
   data
 } 
+
+
+
+
+
+
+read_dscmip_subset <- function(folder, var, scen, gcm, sf = NULL){
+
+  files <- paste0(folder, "/", scen, "/", gcm, "/", var, "/", var, "1991-2100.nc")
+  
+  data <- stars::read_stars(files)
+  data <- sf::st_crop(data, sf)
+
+  names(data) <- var
+  
+  data
+}
+
+
