@@ -192,12 +192,26 @@ flux2mm <- function(data){
 
 
 
+#' Read downscaled CMIP5 datasets
+#'
+#' @param folder TBW
+#' @param var TBW
+#' @param scen TBW
+#' @param gcm TBW
+#' @param sf TBW
+#'
+#' @return TBW
+#' @export 
+#'
+#' @examples #TBW  
 read_dscmip_subset <- function(folder, var, scen, gcm, sf = NULL){
 
   files <- paste0(folder, "/", scen, "/", gcm, "/", var, "/", var, "1991-2100.nc")
   
   data <- stars::read_stars(files)
-  data <- sf::st_crop(data, sf)
+  if(!is.null(sf)){
+    data <- sf::st_crop(data, sf)
+  } 
 
   names(data) <- var
   
