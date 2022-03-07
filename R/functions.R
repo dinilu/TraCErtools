@@ -215,7 +215,7 @@ read_dscmip_subset <- function(folder, var, scen, gcm, sf = NULL){
 
   names(data) <- var
   
-  data
+  time_2_calendar_dates(data, 41, 150)
 }
 
 
