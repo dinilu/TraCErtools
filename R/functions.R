@@ -59,7 +59,7 @@ read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
 
   names(data) <- var
   
-  time_2_calendar_dates(data, y_start, y_end)
+  time_2_calendar_dates(data, y_start+1, y_end)
 }
 
 
@@ -77,9 +77,7 @@ read_dstrace_subset <- function(folder, var, y_start, y_end, sf = NULL){
 calendar_dates <- function(y_start, y_end, by = "1 month"){
   cal_start <- lubridate::ymd("1950-01-01") + lubridate::years(y_start)
   cal_end <- lubridate::ymd("1950-12-01") + lubridate::years(y_end)
-  cal_dates <- seq(cal_start, cal_end, by = by)
-  cal_dates <- cal_dates[lubridate::year(cal_dates) != 0]
-  cal_dates
+  seq(cal_start, cal_end, by = by)
 }
 
 
@@ -123,9 +121,7 @@ read_trace_subset <- function(folder, var, point){
   data <- lapply(files, FUN = stars::read_ncdf)
   data <- do.call(c, data)
   
-  # gc()
-  
-  data <- time_2_calendar_dates(data, -22000, 40)
+  data <- time_2_calendar_dates(data, -21999, 40)
   
   if(var %in% c("TS", "TSMX", "TSMN")){
     data <- kelvin2celsius(data)
@@ -136,12 +132,9 @@ read_trace_subset <- function(folder, var, point){
   
   lat <- point[2]
   lats <- stars::st_dimensions(data)$lat$value
-  # dif.lats <- lats - lat
-  # i <- which.max(dif.lats[dif.lats < 0])
   i <- findInterval(lat, lats)
   
   data <- dplyr::filter(data, lat > floor(lats[i]), lat < ceiling(lats[i+1]))
-  # data <- filter(data, lon > -2, lon < 5, lat > 37, lat < 46)
   sf::st_crop(data, point)
 } 
 
@@ -156,10 +149,8 @@ read_trace_subset <- function(folder, var, point){
 #' @examples # TBW  
 kelvin2celsius <- function(data) {
   var <- names(data)
-  # data_backup <- data
   data_class <- class(data[[var]])  
   data[[var]]  <- as.numeric(data[[var]]) - 273.15
-  # class(data[[var]]) <- class(data_backup[[var]])
   class(data[[var]]) <- data_class
   units <- list(numerator = "\u00B0C", denominator = character(0))
   class(units) <- "symbolic_units"
